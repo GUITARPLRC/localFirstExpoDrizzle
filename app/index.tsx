@@ -1,12 +1,12 @@
-import { Pressable, TextInput, View, Text } from "react-native"
+import { Pressable, TextInput, View, Text, ScrollView } from "react-native"
 import * as schema from "@/database/schema"
 import { db } from "@/database"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useLiveQuery } from "drizzle-orm/expo-sqlite"
-import { eq } from "drizzle-orm"
+import ListItem from "@/components/ListItem"
 
 export default function Index() {
-	const { data } = useLiveQuery(db.select().from(schema.listItems))
+	const { data } = useLiveQuery(db.select().from(schema.listItems)) as { data: schema.listItems[] }
 	const [itemText, setItemText] = useState("")
 	useEffect(() => {
 		const run = async () => {
@@ -25,34 +25,47 @@ export default function Index() {
 		setItemText("")
 	}
 
-	const handleDelete = async (id: string) => {
-		await db.delete(schema.listItems).where(eq(schema.listItems.id, id))
-	}
+	const completedTasks = useMemo(() => data.filter((item) => !item.isCompleted), [data])
+	const incompleteTasks = useMemo(() => data.filter((item) => item.isCompleted), [data])
 
 	return (
 		<View
 			style={{
 				flex: 1,
-				justifyContent: "center",
-				alignItems: "center",
+				backgroundColor: "#333",
+				paddingTop: 100,
+				paddingHorizontal: 20,
 			}}
 		>
-			<TextInput
-				value={itemText}
-				onChangeText={(value) => setItemText(value)}
-				style={{ borderColor: "red", borderWidth: 1, width: 200, padding: 10 }}
-			/>
-			<Pressable onPress={handleAdd}>
-				<Text>Add</Text>
-			</Pressable>
-			{data.map((item) => (
-				<View key={item.id} style={{ flexDirection: "row" }}>
-					<Text style={{ marginRight: 10 }}>{item.title}</Text>
-					<Pressable onPress={() => handleDelete(item.id)}>
-						<Text>X</Text>
-					</Pressable>
-				</View>
-			))}
+			<View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+				<TextInput
+					value={itemText}
+					onChangeText={(value) => setItemText(value)}
+					style={{
+						flex: 1,
+						padding: 10,
+						marginRight: 10,
+						borderRadius: 10,
+						backgroundColor: "white",
+						color: "black",
+						fontSize: 24,
+					}}
+				/>
+				<Pressable
+					onPress={handleAdd}
+					style={{ borderRadius: 10, backgroundColor: "#44aabb", padding: 10 }}
+				>
+					<Text style={{ color: "white", fontSize: 24 }}>Add</Text>
+				</Pressable>
+			</View>
+			<ScrollView showsVerticalScrollIndicator={false}>
+				{completedTasks.map((item) => (
+					<ListItem key={item.id} item={item} />
+				))}
+				{incompleteTasks.map((item) => (
+					<ListItem key={item.id} item={item} />
+				))}
+			</ScrollView>
 		</View>
 	)
 }
